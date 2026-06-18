@@ -2,18 +2,13 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { requireAuth } from '../middleware/auth';
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `${Date.now()}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 
 const ALLOWED_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
@@ -33,9 +28,22 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/', requireAuth, upload.single('image'), (req, res) => {
+router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   if (!req.file) { res.status(400).json({ error: 'Файл не отримано' }); return; }
-  res.json({ url: `/uploads/${req.file.filename}` });
+
+  try {
+    const filename = `${Date.now()}.webp`;
+    const filepath = path.join(UPLOAD_DIR, filename);
+
+    await sharp(req.file.buffer)
+      .resize({ width: 1400, height: 1400, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toFile(filepath);
+
+    res.json({ url: `/uploads/${filename}` });
+  } catch {
+    res.status(500).json({ error: 'Помилка обробки зображення' });
+  }
 });
 
 router.delete('/:filename', requireAuth, (req, res) => {

@@ -66,7 +66,7 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-10 items-center">
           <div className="md:w-1/2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={about.photo} alt={about.fio} className="w-full max-w-md mx-auto object-cover rounded" />
+            <img src={about.photo} alt={about.fio} fetchPriority="high" className="w-full max-w-md mx-auto object-cover rounded" />
           </div>
           <div className="md:w-1/2">
             <h1 className="text-3xl font-bold text-gray-900 mb-5 leading-tight">{about.fio}</h1>
@@ -104,7 +104,7 @@ export default async function HomePage() {
           </div>
           <div className="md:w-1/2 flex items-center justify-center">
             {photos['education']
-              ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['education']} alt="Освіта" className="w-full max-w-sm rounded-lg object-cover" />
+              ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['education']} alt="Освіта" loading="lazy" className="w-full max-w-sm rounded-lg object-cover" />
               : <div className="bg-white/20 rounded-lg w-full max-w-sm aspect-[3/4] flex items-center justify-center text-white/60 text-sm">Ліцензія / Диплом</div>
             }
           </div>
@@ -119,7 +119,7 @@ export default async function HomePage() {
           <div className="flex flex-col md:flex-row gap-10 items-start">
             <div className="md:w-1/2">
               {photos['specialization']
-                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['specialization']} alt="Спеціалізація" className="w-full rounded object-cover" />
+                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['specialization']} alt="Спеціалізація" loading="lazy" className="w-full rounded object-cover" />
                 : <div className="bg-gray-100 rounded aspect-[4/3] flex items-center justify-center text-gray-400 text-sm">Фото</div>
               }
             </div>
@@ -152,7 +152,7 @@ export default async function HomePage() {
             </div>
             <div className="md:w-1/2">
               {photos['symptoms']
-                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['symptoms']} alt="Симптоми" className="w-full rounded object-cover" />
+                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photos['symptoms']} alt="Симптоми" loading="lazy" className="w-full rounded object-cover" />
                 : <div className="bg-gray-100 rounded aspect-[4/3] flex items-center justify-center text-gray-400 text-sm">Фото</div>
               }
             </div>
@@ -250,7 +250,8 @@ export default async function HomePage() {
             <div className={`flex flex-col gap-10 items-start ${photoFirst ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
               <div className="md:w-1/2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={cs.photo} alt={cs.title} className="w-full rounded object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cs.photo} alt={cs.title} loading="lazy" className="w-full rounded object-cover" />
               </div>
               <div className="md:w-1/2">
                 <ul className="space-y-2">{bullets.map((line, i) => <li key={i} className="flex gap-2 text-gray-700"><span className="mt-1 text-site-blue shrink-0">•</span><span>{line}</span></li>)}</ul>

@@ -28,10 +28,11 @@ const authLimit = rateLimit({
 });
 
 function createTransporter() {
+  const port = Number(process.env.SMTP_PORT) || 587;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    port,
+    secure: port === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
 }
@@ -83,11 +84,13 @@ router.post('/logout', (req: Request, res: Response) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', authLimit, async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
+  console.log('[forgot-password] запит отримано, email:', email);
   if (!email) {
     res.status(400).json({ error: 'email is required' });
     return;
   }
   const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  console.log('[forgot-password] юзер в БД:', user ? 'знайдено' : 'НЕ знайдено');
   if (!user) {
     res.json({ message: 'If the email exists, a reset link has been sent' });
     return;
@@ -95,25 +98,37 @@ router.post('/forgot-password', authLimit, async (req: Request, res: Response) =
   db.prepare('DELETE FROM password_reset_tokens WHERE email = ?').run(email);
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)').run(email, token, expiresAt);
 
   const resetLink = `${BASE_URL}/reset-password?token=${token}`;
+  console.log('[forgot-password] email:', email);
+  console.log('[forgot-password] resetLink:', resetLink);
+  console.log('[forgot-password] SMTP config:', {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    user: process.env.SMTP_USER,
+    passSet: !!process.env.SMTP_PASS,
+  });
   try {
     const transporter = createTransporter();
-    await transporter.sendMail({
+    console.log('[forgot-password] verifying transporter...');
+    await transporter.verify();
+    console.log('[forgot-password] transporter OK, sending mail...');
+    const info = await transporter.sendMail({
       from: process.env.SMTP_USER,
       to: email,
       subject: 'Скидання пароля',
       html: `
         <p>Ви запросили скидання пароля.</p>
-        <p>Перейдіть за посиланням (дійсне 1 годину):</p>
+        <p>Перейдіть за посиланням (дійсне 15 хвилин):</p>
         <p><a href="${resetLink}">${resetLink}</a></p>
         <p>Якщо ви не запитували скидання — проігноруйте цей лист.</p>
       `,
     });
+    console.log('[forgot-password] sent, messageId:', info.messageId);
   } catch (err) {
-    console.error('Email send error:', err);
+    console.error('[forgot-password] Email send error:', err);
     res.status(500).json({ error: 'Failed to send reset email' });
     return;
   }

@@ -1,8 +1,32 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import nodemailer from 'nodemailer';
 import db from '../db';
 import { requireAuth } from '../middleware/auth';
+
+function sendOrderNotification(name: string, phone: string, email: string, description: string) {
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port,
+    secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: process.env.NOTIFY_EMAIL,
+    subject: `Нова заявка від ${name}`,
+    html: `
+      <h2>Нова заявка з сайту</h2>
+      <p><b>Ім'я:</b> ${name}</p>
+      <p><b>Телефон:</b> ${phone}</p>
+      ${email ? `<p><b>Email:</b> ${email}</p>` : ''}
+      <p><b>Проблема:</b></p>
+      <p>${description}</p>
+    `,
+  }).catch((err: unknown) => console.error('[orders] email notify error:', err));
+}
 
 const router = Router();
 
@@ -108,6 +132,9 @@ router.post('/', submitLimit, (req: Request, res: Response) => {
   const result = db
     .prepare('INSERT INTO orders (name, phone_number, email, description) VALUES (?, ?, ?, ?)')
     .run(data.name, data.phone_number, data.email, data.description);
+
+  sendOrderNotification(data.name, data.phone_number, data.email, data.description);
+
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
